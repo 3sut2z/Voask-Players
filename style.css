@@ -1,185 +1,26 @@
-* {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-}
+body { background: #111; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+.video-container { position: relative; width: 800px; background: #000; overflow: hidden; }
+video { width: 100%; display: block; }
 
-body {
-    background-color: #141414;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    font-family: Arial, sans-serif;
-}
+/* Controls */
+.video-controls { position: absolute; bottom: 0; width: 100%; background: linear-gradient(transparent, rgba(0,0,0,0.8)); padding: 10px; opacity: 0; transition: 0.3s; }
+.video-container:hover .video-controls { opacity: 1; }
 
-/* Container bọc ngoài */
-.video-container {
-    position: relative;
-    width: 100%;
-    max-width: 800px;
-    background-color: #000;
-    overflow: hidden;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-    border-radius: 4px;
-}
+.timeline { height: 4px; background: #555; cursor: pointer; }
+.progress-bar { height: 100%; background: #ff0043; width: 0; }
 
-video {
-    width: 100%;
-    display: block;
-    cursor: pointer;
-}
+.controls-buttons { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; color: #fff; }
+.left-controls, .right-controls { display: flex; align-items: center; gap: 15px; }
 
-/* Nút Play lớn ở giữa */
-.big-play-btn {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(255, 255, 255, 0.15);
-    border: 2px solid #fff;
-    border-radius: 50%;
-    width: 70px;
-    height: 70px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    z-index: 2;
-}
+/* Volume Slider */
+.volume-wrapper { display: flex; align-items: center; }
+#volumeSlider { width: 70px; cursor: pointer; accent-color: #ff0043; }
 
-.big-play-btn span {
-    color: #fff;
-    font-size: 40px;
-}
+/* Speed Menu */
+.speed-wrapper { position: relative; }
+.speed-menu { position: absolute; bottom: 35px; right: 0; background: #222; display: none; flex-direction: column; border-radius: 4px; }
+.speed-menu button { background: none; border: none; color: white; padding: 8px 15px; cursor: pointer; }
+.speed-menu button.active { color: #ff0043; }
 
-.big-play-btn:hover {
-    transform: translate(-50%, -50%) scale(1.1);
-    background: rgba(255, 255, 255, 0.3);
-}
-
-/* Thanh điều khiển */
-.video-controls {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: linear-gradient(to top, rgba(0,0,0,0.85), rgba(0,0,0,0));
-    padding: 10px;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    z-index: 3;
-}
-
-/* Hiện thanh điều khiển khi hover vào container */
-.video-container:hover .video-controls {
-    opacity: 1;
-}
-
-.controls-buttons {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding-top: 5px;
-}
-
-.left-controls, .right-controls {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.control-btn {
-    background: none;
-    border: none;
-    color: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s;
-}
-
-.control-btn:hover {
-    color: #ff0043; /* Màu đỏ thương hiệu giống JW Player */
-}
-
-.control-btn span {
-    font-size: 26px;
-}
-
-/* Hiển thị thời gian */
-.time-display {
-    color: #fff;
-    font-size: 13px;
-}
-
-/* Cụm chỉnh âm lượng */
-.volume-container {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-
-.volume-slider {
-    width: 0;
-    opacity: 0;
-    transition: width 0.2s ease, opacity 0.2s ease;
-    cursor: pointer;
-    accent-color: #ff0043;
-}
-
-.volume-container:hover .volume-slider {
-    width: 60px;
-    opacity: 1;
-}
-
-/* Thanh tua thông minh (Timeline) */
-.timeline-container {
-    height: 6px;
-    width: 100%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    margin-bottom: 5px;
-}
-
-.timeline {
-    background: rgba(255,255,255,0.2);
-    height: 4px;
-    width: 100%;
-    position: relative;
-    transition: height 0.1s ease;
-}
-
-.timeline-container:hover .timeline {
-    height: 6px;
-}
-
-.progress-bar {
-    background: #ff0043;
-    height: 100%;
-    width: 0;
-    position: absolute;
-    left: 0;
-    top: 0;
-}
-
-.thumb {
-    position: absolute;
-    height: 12px;
-    width: 12px;
-    background: #fff;
-    border-radius: 50%;
-    top: 50%;
-    transform: translateY(-50%) translateX(-50%);
-    left: 0;
-    opacity: 0;
-    transition: opacity 0.1s ease;
-}
-
-.timeline-container:hover .thumb {
-    opacity: 1;
-}
-
+.control-btn { background: none; border: none; color: white; cursor: pointer; }
+.big-play-btn { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 60px; color: white; cursor: pointer; }
