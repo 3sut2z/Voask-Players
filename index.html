@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom GUI Video Player with Big Play Button</title>
+    <title>Advanced Custom Video Player</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -14,9 +14,9 @@
             align-items: center;
             height: 100vh;
             margin: 0;
+            user-select: none;
         }
 
-        /* Container bọc toàn bộ player */
         .custom-player {
             position: relative;
             width: 100%;
@@ -25,7 +25,6 @@
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 20px 40px rgba(0,0,0,0.6);
-            cursor: pointer; /* Click để play/pause */
         }
 
         video {
@@ -33,156 +32,280 @@
             display: block;
         }
 
-        /* Nút Big Play ở giữa màn hình */
+        /* --- BIG PLAY BUTTON (Yêu cầu mới) --- */
         .big-play-btn {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 100px;
-            height: 100px;
-            background-color: rgba(255, 62, 62, 0.8); /* Màu đỏ chủ đạo, hơi trong suốt */
-            border: none;
+            width: 80px;
+            height: 80px;
+            background-color: rgba(0, 0, 0, 0.4); /* Nền đen nhìn xuyên qua được */
+            border: 2px solid #ffffff; /* Viền trắng */
             border-radius: 50%;
             cursor: pointer;
             display: flex;
             justify-content: center;
             align-items: center;
-            opacity: 0.9;
-            transition: opacity 0.3s ease, transform 0.2s ease;
-            z-index: 10; /* Đảm bảo nút nằm trên video và controls */
+            transition: all 0.3s ease;
+            z-index: 10;
         }
 
         .big-play-btn:hover {
-            opacity: 1;
-            transform: translate(-50%, -50%) scale(1.1); /* Phóng to nhẹ khi hover */
+            background-color: rgba(0, 0, 0, 0.7);
+            transform: translate(-50%, -50%) scale(1.1);
         }
 
         .big-play-btn svg {
-            width: 50px;
-            height: 50px;
-            fill: #fff; /* Màu biểu tượng trắng */
+            width: 40px;
+            height: 40px;
+            fill: #ffffff; /* Icon màu trắng */
+            margin-left: 4px; /* Lệch tâm chút cho cân đối với hình tam giác */
         }
 
-        /* Thanh điều khiển (GUI) tự dựng */
+        /* --- CONTROLS BAR --- */
         .player-controls {
             position: absolute;
             bottom: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
             display: flex;
             flex-direction: column;
             padding: 15px;
-            opacity: 0; /* Ẩn đi ban đầu */
+            padding-top: 30px;
+            opacity: 0;
             transition: opacity 0.3s ease;
-            z-index: 5; /* Đảm bảo nằm trên video */
+            z-index: 5;
         }
 
-        /* Hiện GUI khi di chuột vào player */
+        /* Khi class .initial-state hoạt động, ẩn hoàn toàn thanh điều khiển */
+        .custom-player.initial-state .player-controls {
+            display: none !important;
+        }
+
         .custom-player:hover .player-controls {
             opacity: 1;
         }
 
-        /* Nhóm hàng chứa các nút bấm */
         .controls-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-top: 10px;
+            margin-top: 12px;
         }
 
         .controls-left, .controls-right {
             display: flex;
             align-items: center;
-            gap: 10px; /* Giảm khoảng cách giữa các nút */
+            gap: 12px;
         }
 
-        /* Định dạng các nút bấm - sử dụng icon */
         .btn-control {
             background: none;
             border: none;
             color: #fff;
             cursor: pointer;
-            padding: 8px; /* Tăng padding để dễ bấm */
-            border-radius: 50%; /* Nút tròn */
-            transition: background 0.2s;
+            padding: 6px;
+            border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
+            transition: background 0.2s;
         }
 
         .btn-control:hover {
             background: rgba(255, 255, 255, 0.2);
         }
 
-        /* Kích thước icon trong các nút điều khiển */
         .btn-control svg {
-            width: 20px;
-            height: 20px;
-            fill: #fff; /* Màu icon trắng */
+            width: 22px;
+            height: 22px;
+            fill: #fff;
         }
 
-        /* Thanh Tiến Trình (Timeline/Progress) */
+        /* --- TIMELINE & NÚT TRÒN KÉO (Yêu cầu mới) --- */
         .progress-container {
             width: 100%;
             height: 6px;
-            background: rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.2);
             cursor: pointer;
             border-radius: 3px;
             position: relative;
-            /* Ẩn timeline khi nút Big Play đang hiện */
-            display: block; 
+            display: flex;
+            align-items: center;
         }
 
-        /* CSS class để ẩn timeline */
-        .progress-container.hidden {
-            display: none;
+        .progress-container:hover {
+            height: 8px;
         }
 
         .progress-bar {
             height: 100%;
             width: 0%;
-            background: #ff3e3e; /* Màu đỏ chủ đạo */
+            background: #ff3e3e;
             border-radius: 3px;
+            position: relative;
         }
 
-        /* Thanh âm lượng */
+        /* Nút tròn chỉ xuất hiện khi hover vào timeline hoặc khi đang kéo */
+        .progress-handle {
+            position: absolute;
+            right: -6px;
+            top: 50%;
+            transform: translateY(-50%) scale(0);
+            width: 14px;
+            height: 14px;
+            background: #ffffff;
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(0,0,0,0.5);
+            transition: transform 0.1s ease;
+        }
+
+        .progress-container:hover .progress-handle,
+        .progress-container.dragging .progress-handle {
+            transform: translateY(-50%) scale(1);
+        }
+
+        /* Tooltip hiển thị thời gian khi tua */
+        .time-tooltip {
+            position: absolute;
+            top: -35px;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 4px 8px;
+            font-size: 11px;
+            border-radius: 4px;
+            display: none;
+            pointer-events: none;
+            white-space: nowrap;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* --- VOLUME SLIDER ẨN/HIỆN (Yêu cầu mới) --- */
+        .volume-container {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            overflow: hidden;
+        }
+
         .volume-slider {
-            width: 70px;
+            width: 0;
+            opacity: 0;
             cursor: pointer;
             accent-color: #ff3e3e;
+            transition: width 0.3s ease, opacity 0.2s ease;
+        }
+
+        /* Class active để mở rộng slider */
+        .volume-slider.active {
+            width: 80px;
+            opacity: 1;
+            margin-left: 6px;
         }
 
         .time-display {
             color: #ccc;
             font-size: 13px;
-            white-space: nowrap; /* Không xuống dòng */
+        }
+
+        /* --- MENU SETTING TỐC ĐỘ (Yêu cầu mới) --- */
+        .setting-container {
+            position: relative;
+        }
+
+        .settings-menu {
+            position: absolute;
+            bottom: 45px;
+            right: 0;
+            background: rgba(28, 28, 28, 0.95);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            padding: 6px 0;
+            width: 140px;
+            display: none; /* Ẩn mặc định */
+            flex-direction: column;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        .settings-menu.active {
+            display: flex;
+        }
+
+        .menu-title {
+            color: #888;
+            font-size: 11px;
+            padding: 6px 14px;
+            text-transform: uppercase;
+            font-weight: bold;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .menu-item {
+            background: none;
+            border: none;
+            color: #eee;
+            text-align: left;
+            padding: 8px 14px;
+            font-size: 13px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .menu-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+
+        .menu-item.selected::after {
+            content: '✓';
+            color: #ff3e3e;
+            font-weight: bold;
         }
     </style>
 </head>
 <body>
 
-<div class="custom-player" id="playerContainer">
-    <video id="video" autoplay muted></video>
+<!-- custom-player bắt đầu với class initial-state (chỉ hiện Big Play, ẩn hoàn toàn GUI khác) -->
+<div class="custom-player initial-state" id="playerContainer">
+    
+    <video id="video" preload="auto"></video>
 
+    <!-- 1. BIG PLAY BUTTON -->
     <button class="big-play-btn" id="bigPlayBtn">
-        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> </button>
+        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </button>
 
+    <!-- GUI ĐIỀU KHIỂN -->
     <div class="player-controls">
         
-        <div class="progress-container hidden" id="progressContainer"> <div class="progress-bar" id="progressBar"></div>
+        <!-- 2. TIMELINE + NÚT TRÒN KÉO + TOOLTIP -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-handle"></div>
+            </div>
+            <div class="time-tooltip" id="timeTooltip">00:00</div>
         </div>
 
         <div class="controls-row">
             <div class="controls-left">
+                <!-- Nút Play/Pause nhỏ -->
                 <button class="btn-control" id="playBtn">
-                    <svg viewBox="0 0 24 24" id="playIcon"><path d="M8 5v14l11-7z"/></svg> <svg viewBox="0 0 24 24" id="pauseIcon" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> </button>
+                    <svg viewBox="0 0 24 24" id="playIcon"><path d="M8 5v14l11-7z"/></svg>
+                    <svg viewBox="0 0 24 24" id="pauseIcon" style="display:none;"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                </button>
                 
-                <div style="display: flex; align-items: center; gap: 5px;">
+                <!-- 3. KHU VỰC ÂM THANH (Click hiện slider / Double Click Mute) -->
+                <div class="volume-container">
                     <button class="btn-control" id="muteBtn">
-                        <svg viewBox="0 0 24 24" id="volumeUpIcon"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg> <svg viewBox="0 0 24 24" id="volumeOffIcon" style="display:none;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg> </button>
-                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.1" value="1">
+                        <svg viewBox="0 0 24 24" id="volumeUpIcon"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg>
+                        <svg viewBox="0 0 24 24" id="volumeOffIcon" style="display:none;"><path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/></svg>
+                    </button>
+                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.05" value="1">
                 </div>
 
                 <div class="time-display">
@@ -191,8 +314,24 @@
             </div>
 
             <div class="controls-right">
+                <!-- 4. KHU VỰC CÀI ĐẶT TỐC ĐỘ -->
+                <div class="setting-container">
+                    <button class="btn-control" id="settingsBtn">
+                        <svg viewBox="0 0 24 24"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                    </button>
+                    <div class="settings-menu" id="settingsMenu">
+                        <div class="menu-title">Tốc độ phát</div>
+                        <button class="menu-item" data-speed="0.5">0.5x</button>
+                        <button class="menu-item" data-speed="1" class="selected">Chuẩn</button>
+                        <button class="menu-item" data-speed="1.5">1.5x</button>
+                        <button class="menu-item" data-speed="2">2x</button>
+                    </div>
+                </div>
+
+                <!-- Nút Toàn màn hình -->
                 <button class="btn-control" id="fullscreenBtn">
-                    <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg> </button>
+                    <svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+                </button>
             </div>
         </div>
     </div>
@@ -203,24 +342,29 @@
         const video = document.getElementById('video');
         const playerContainer = document.getElementById('playerContainer');
         const bigPlayBtn = document.getElementById('bigPlayBtn');
-        
-        // Các thành phần GUI
         const playBtn = document.getElementById('playBtn');
         const playIcon = document.getElementById('playIcon');
         const pauseIcon = document.getElementById('pauseIcon');
+        
         const muteBtn = document.getElementById('muteBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
         const volumeUpIcon = document.getElementById('volumeUpIcon');
         const volumeOffIcon = document.getElementById('volumeOffIcon');
-        const volumeSlider = document.getElementById('volumeSlider');
+
         const progressContainer = document.getElementById('progressContainer');
         const progressBar = document.getElementById('progressBar');
+        const timeTooltip = document.getElementById('timeTooltip');
         const currentTimeText = document.getElementById('currentTime');
         const durationText = document.getElementById('duration');
+
+        const settingsBtn = document.getElementById('settingsBtn');
+        const settingsMenu = document.getElementById('settingsMenu');
+        const menuItems = document.querySelectorAll('.menu-item');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
 
         const streamUrl = 'https://raw.githubusercontent.com/3sut2z/M3U8/main/KAMALI.m3u8';
 
-        // --- KHỞI TẠO HLS STREAM ---
+        // --- HLS INIT ---
         if (Hls.isSupported()) {
             const hls = new Hls();
             hls.loadSource(streamUrl);
@@ -229,78 +373,70 @@
             video.src = streamUrl;
         }
 
-        // --- XỬ LÝ LOGIC ĐIỀU KHIỂN (GUI LOGIC) ---
+        // --- 1. XỬ LÝ KHỞI ĐẦU VIDEO & BIG PLAY ---
+        function startVideo() {
+            playerContainer.classList.remove('initial-state'); // Hiện lại GUI chính
+            bigPlayBtn.style.display = 'none'; // Xóa bỏ hoàn toàn nút Big Play
+            video.play();
+            updatePlayPauseUI();
+        }
 
-        // Hàm cập nhật icon Play/Pause và hiển thị nút Big Play
+        bigPlayBtn.addEventListener('click', startVideo);
+
         function updatePlayPauseUI() {
             if (video.paused) {
                 playIcon.style.display = 'block';
                 pauseIcon.style.display = 'none';
-                bigPlayBtn.style.display = 'flex'; // Hiện Big Play khi video tạm dừng
-                progressContainer.classList.add('hidden'); // Ẩn timeline
             } else {
                 playIcon.style.display = 'none';
                 pauseIcon.style.display = 'block';
-                bigPlayBtn.style.display = 'none'; // Ẩn Big Play khi video đang phát
-                progressContainer.classList.remove('hidden'); // Hiện timeline
             }
         }
 
-        // 1. Play / Pause
-        function togglePlay() {
-            if (video.paused) {
-                video.play();
+        // Bấm vào thân video để Play/Pause (chỉ hoạt động sau khi đã bấm nút Play đầu tiên)
+        video.addEventListener('click', () => {
+            if (!playerContainer.classList.contains('initial-state')) {
+                if (video.paused) video.play(); else video.pause();
+                updatePlayPauseUI();
+            }
+        });
+        playBtn.addEventListener('click', () => {
+            if (video.paused) video.play(); else video.pause();
+            updatePlayPauseUI();
+        });
+
+        // --- 2. THANH KÉO ÂM THANH (Single click hiện/ẩn, Double click Mute) ---
+        let clickTimer = null;
+
+        muteBtn.addEventListener('click', (e) => {
+            clearTimeout(clickTimer);
+            // Kiểm tra click đơn hay double click
+            if (e.detail === 1) { 
+                clickTimer = setTimeout(() => {
+                    // Click đơn: Ẩn/hiện thanh kéo
+                    volumeSlider.classList.toggle('active');
+                }, 250);
+            }
+        });
+
+        muteBtn.addEventListener('dblclick', () => {
+            clearTimeout(clickTimer);
+            // Double click: Bật/Tắt tiếng hoàn toàn
+            video.muted = !video.muted;
+            if (video.muted) {
+                volumeSlider.value = 0;
             } else {
-                video.pause();
+                volumeSlider.value = video.volume || 1;
             }
-            updatePlayPauseUI(); // Cập nhật GUI ngay lập tức
-        }
-
-        playBtn.addEventListener('click', togglePlay);
-        bigPlayBtn.addEventListener('click', togglePlay); // Nút Big Play cũng điều khiển play/pause
-        video.addEventListener('click', togglePlay); // Bấm vào giữa màn hình video để Play/Pause
-
-        // Xử lý sự kiện khi video được phát hoặc tạm dừng bởi các yếu tố khác
-        video.addEventListener('play', updatePlayPauseUI);
-        video.addEventListener('pause', updatePlayPauseUI);
-
-        // 2. Cập nhật Thanh Tiến Trình & Thời gian
-        function formatTime(seconds) {
-            if (isNaN(seconds) || seconds === Infinity) return "00:00";
-            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
-            const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
-            return `${mins}:${secs}`;
-        }
-
-        video.addEventListener('timeupdate', () => {
-            // Cập nhật độ dài thanh đỏ (%)
-            if (video.duration && video.duration !== Infinity) {
-                const percentage = (video.currentTime / video.duration) * 100;
-                progressBar.style.width = percentage + '%';
-            }
-            
-            // Cập nhật số giây text
-            currentTimeText.innerText = formatTime(video.currentTime);
+            updateVolumeUI();
         });
 
-        video.addEventListener('loadedmetadata', () => {
-            durationText.innerText = formatTime(video.duration);
+        volumeSlider.addEventListener('input', (e) => {
+            video.volume = e.target.value;
+            video.muted = (e.target.value == 0);
+            updateVolumeUI();
         });
 
-        // 3. Tua video khi click vào thanh tiến trình
-        progressContainer.addEventListener('click', (e) => {
-            const rect = progressContainer.getBoundingClientRect();
-            const clickX = e.clientX - rect.left; // Vị trí click chuột
-            const width = rect.width;
-            const clickRatio = clickX / width;
-            
-            // Tua video đến thời điểm tương ứng
-            if (video.duration && video.duration !== Infinity) {
-                video.currentTime = clickRatio * video.duration;
-            }
-        });
-
-        // Hàm cập nhật icon Mute/Volume
         function updateVolumeUI() {
             if (video.muted || video.volume === 0) {
                 volumeUpIcon.style.display = 'none';
@@ -311,38 +447,117 @@
             }
         }
 
-        // 4. Âm lượng & Mute
-        volumeSlider.addEventListener('input', (e) => {
-            video.volume = e.target.value;
-            video.muted = (e.target.value == 0);
-            updateVolumeUI();
-        });
+        // --- 3. THANH TIMELINE KÉO TUÀ & NÚT TRÒN & TOOLTIP ---
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds === Infinity) return "00:00";
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
 
-        muteBtn.addEventListener('click', () => {
-            video.muted = !video.muted;
-            if (video.muted) {
-                volumeSlider.value = 0; // Cập nhật slider khi mute
-            } else {
-                volumeSlider.value = video.volume; // Cập nhật slider về mức volume trước đó
+        // Cập nhật timeline tự động theo thời gian video chạy
+        let isDragging = false;
+        video.addEventListener('timeupdate', () => {
+            if (!isDragging && video.duration) {
+                const percentage = (video.currentTime / video.duration) * 100;
+                progressBar.style.width = percentage + '%';
+                currentTimeText.innerText = formatTime(video.currentTime);
             }
-            updateVolumeUI();
         });
 
-        // 5. Toàn màn hình (Fullscreen)
+        video.addEventListener('loadedmetadata', () => {
+            durationText.innerText = formatTime(video.duration);
+        });
+
+        // Xử lý logic di chuyển chuột & Kéo (Drag) trên Timeline
+        function getTimelineTime(e) {
+            const rect = progressContainer.getBoundingClientRect();
+            let posX = e.clientX - rect.left;
+            if (posX < 0) posX = 0;
+            if (posX > rect.width) posX = rect.width;
+            const ratio = posX / rect.width;
+            return { ratio, targetTime: ratio * video.duration, posX };
+        }
+
+        // Di chuyển chuột qua thanh timeline (Hiện tooltip thời gian)
+        progressContainer.addEventListener('mousemove', (e) => {
+            if (!video.duration || video.duration === Infinity) return;
+            const { targetTime, posX } = getTimelineTime(e);
+            
+            timeTooltip.style.display = 'block';
+            timeTooltip.style.left = posX + 'px';
+            timeTooltip.innerText = formatTime(targetTime);
+        });
+
+        progressContainer.addEventListener('mouseleave', () => {
+            if (!isDragging) timeTooltip.style.display = 'none';
+        });
+
+        // Bấm chuột xuống để bắt đầu Kéo
+        progressContainer.addEventListener('mousedown', (e) => {
+            if (!video.duration || video.duration === Infinity) return;
+            isDragging = true;
+            progressContainer.classList.add('dragging');
+            handleTimelineDrag(e);
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (isDragging) handleTimelineDrag(e);
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                progressContainer.classList.remove('dragging');
+                timeTooltip.style.display = 'none';
+            }
+        });
+
+        function handleTimelineDrag(e) {
+            const { ratio, targetTime, posX } = getTimelineTime(e);
+            progressBar.style.width = (ratio * 100) + '%';
+            video.currentTime = targetTime;
+            currentTimeText.innerText = formatTime(targetTime);
+            
+            // Giữ tooltip chạy theo khi đang kéo ngoài vùng timeline
+            timeTooltip.style.display = 'block';
+            timeTooltip.style.left = posX + 'px';
+            timeTooltip.innerText = formatTime(targetTime);
+        }
+
+        // --- 4. ICON SETTING & ĐỔI TỐC ĐỘ PHÁT ---
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Tránh kích hoạt sự kiện click của video
+            settingsMenu.classList.toggle('active');
+        });
+
+        // Click ra ngoài menu thì tự đóng menu cài đặt
+        document.addEventListener('click', () => {
+            settingsMenu.classList.remove('active');
+        });
+
+        menuItems.forEach(item => {
+            item.addEventListener('click', (e) => {
+                const speed = parseFloat(e.target.dataset.speed);
+                video.playbackRate = speed; // Thay đổi tốc độ video thực tế
+                
+                // Cập nhật dấu tích UI
+                menuItems.forEach(i => i.classList.remove('selected'));
+                e.target.classList.add('selected');
+            });
+        });
+
+        // Mặc định chọn tốc độ Chuẩn (1x) lúc đầu
+        document.querySelector('[data-speed="1"]').classList.add('selected');
+
+        // --- FULLSCREEN ---
         fullscreenBtn.addEventListener('click', () => {
             if (!document.fullscreenElement) {
-                // Phải đưa toàn bộ Container vào chế độ Fullscreen để giữ lại GUI tự dựng
-                playerContainer.requestFullscreen().catch(err => {
-                    alert(`Không thể mở toàn màn hình: ${err.message}`);
-                });
+                playerContainer.requestFullscreen().catch(err => alert(err.message));
             } else {
                 document.exitFullscreen();
             }
         });
-
-        // Cập nhật UI lần đầu
-        updatePlayPauseUI();
-        updateVolumeUI();
     });
 </script>
 
