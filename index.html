@@ -3,99 +3,253 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Video Streaming Player</title>
-    <!-- Nhúng thư viện Hls.js từ CDN -->
+    <title>Custom GUI Video Player</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #1c1c1c;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             height: 100vh;
             margin: 0;
         }
-        .player-container {
+
+        /* Container bọc toàn bộ player */
+        .custom-player {
+            position: relative;
             width: 100%;
             max-width: 800px;
-            background: #000;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            border-radius: 8px;
+            background-color: #000;
+            border-radius: 12px;
             overflow: hidden;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
         }
+
         video {
             width: 100%;
             display: block;
         }
-        .controls-info {
+
+        /* Thanh điều khiển (GUI) tự dựng */
+        .player-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            opacity: 0; /* Ẩn đi khi không di chuột vào */
+            transition: opacity 0.3s ease;
+        }
+
+        /* Hiện GUI khi di chuột vào player */
+        .custom-player:hover .player-controls {
+            opacity: 1;
+        }
+
+        /* Nhóm hàng chứa các nút bấm */
+        .controls-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .controls-left, .controls-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        /* Định dạng các nút bấm */
+        .btn-control {
+            background: none;
+            border: none;
             color: #fff;
-            margin-top: 15px;
-            font-size: 14px;
-            text-align: center;
+            font-size: 16px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+
+        .btn-control:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Thanh thời gian (Progress Bar) */
+        .progress-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.3);
+            cursor: pointer;
+            border-radius: 3px;
+            position: relative;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: #ff3e3e; /* Màu đỏ chủ đạo */
+            border-radius: 3px;
+        }
+
+        /* Thanh âm lượng */
+        .volume-slider {
+            width: 70px;
+            cursor: pointer;
+            accent-color: #ff3e3e;
+        }
+
+        .time-display {
+            color: #ccc;
+            font-size: 13px;
         }
     </style>
 </head>
 <body>
 
-<div class="player-container">
-    <!-- Thẻ video chuẩn HTML5 với các nút điều khiển mặc định -->
-    <video id="video" controls autoplay muted></video>
-</div>
+<div class="custom-player" id="playerContainer">
+    <!-- KHÔNG dùng thuộc tính controls của trình duyệt -->
+    <video id="video" autoplay muted></video>
 
-<div class="controls-info">
-    <p>Đang phát luồng HLS mã nguồn mở (Demo Live Stream)</p>
+    <!-- GUI Tự định nghĩa -->
+    <div class="player-controls">
+        
+        <!-- 1. Thanh Tiến Trình (Timeline/Progress) -->
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <!-- 2. Hàng điều khiển chức năng -->
+        <div class="controls-row">
+            <div class="controls-left">
+                <!-- Nút Play/Pause -->
+                <button class="btn-control" id="playBtn">⏸ Hoãn</button>
+                
+                <!-- Thanh điều chỉnh âm lượng -->
+                <div style="display: flex; align-items: center; gap: 5px;">
+                    <button class="btn-control" id="muteBtn">🔊</button>
+                    <input type="range" class="volume-slider" id="volumeSlider" min="0" max="1" step="0.1" value="1">
+                </div>
+
+                <!-- Hiển thị thời gian -->
+                <div class="time-display">
+                    <span id="currentTime">00:00</span> / <span id="duration">00:00</span>
+                </div>
+            </div>
+
+            <div class="controls-right">
+                <!-- Nút Toàn Màn Hình -->
+                <button class="btn-control" id="fullscreenBtn">🔲 Toàn màn hình</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
     document.addEventListener("DOMContentLoaded", () => {
         const video = document.getElementById('video');
+        const playerContainer = document.getElementById('playerContainer');
         
-        // Thay link .m3u8 của bạn vào đây
-        const streamUrl = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'; 
+        // Các thành phần GUI
+        const playBtn = document.getElementById('playBtn');
+        const muteBtn = document.getElementById('muteBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const currentTimeText = document.getElementById('currentTime');
+        const durationText = document.getElementById('duration');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
 
+        const streamUrl = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+
+        // --- KHỞI TẠO HLS STREAM ---
         if (Hls.isSupported()) {
-            // Nếu trình duyệt hỗ trợ Hls.js (Chrome, Firefox, Edge, Safari đời mới...)
             const hls = new Hls();
             hls.loadSource(streamUrl);
             hls.attachMedia(video);
-            
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                video.play().catch(err => {
-                    console.log("Tự động phát bị chặn, chờ người dùng tương tác:", err);
-                });
-            });
-
-            // Xử lý lỗi trong quá trình stream
-            hls.on(Hls.Events.ERROR, (event, data) => {
-                if (data.fatal) {
-                    switch (data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR:
-                            console.log("Lỗi mạng, đang thử kết nối lại...");
-                            hls.startLoad();
-                            break;
-                        case Hls.ErrorTypes.MEDIA_ERROR:
-                            console.log("Lỗi media, đang cố gắng phục hồi...");
-                            hls.recoverMediaError();
-                            break;
-                        default:
-                            console.log("Lỗi không thể phục hồi, hủy stream.");
-                            hls.destroy();
-                            break;
-                    }
-                }
-            });
-
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            // Dành riêng cho Safari trên iPhone/Mac (hỗ trợ sẵn HLS không cần thư viện)
             video.src = streamUrl;
-            video.addEventListener('loadedmetadata', () => {
-                video.play();
-            });
-        } else {
-            alert("Trình duyệt của bạn không hỗ trợ phát luồng video này.");
         }
+
+        // --- XỬ LÝ LOGIC ĐIỀU KHIỂN (GUI LOGIC) ---
+
+        // 1. Play / Pause
+        function togglePlay() {
+            if (video.paused) {
+                video.play();
+                playBtn.innerText = "⏸ Hoãn";
+            } else {
+                video.pause();
+                playBtn.innerText = "▶ Phát";
+            }
+        }
+        playBtn.addEventListener('click', togglePlay);
+        video.addEventListener('click', togglePlay); // Bấm vào giữa màn hình video để Play/Pause
+
+        // 2. Cập nhật Thanh Tiến Trình & Thời gian
+        function formatTime(seconds) {
+            if (isNaN(seconds) || seconds === Infinity) return "00:00";
+            const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+            const secs = Math.floor(seconds % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
+
+        video.addEventListener('timeupdate', () => {
+            // Cập nhật độ dài thanh đỏ (%)
+            const percentage = (video.currentTime / video.duration) * 100;
+            progressBar.style.width = percentage + '%';
+            
+            // Cập nhật số giây text
+            currentTimeText.innerText = formatTime(video.currentTime);
+        });
+
+        video.addEventListener('loadedmetadata', () => {
+            durationText.innerText = formatTime(video.duration);
+        });
+
+        // 3. Tua video khi click vào thanh tiến trình
+        progressContainer.addEventListener('click', (e) => {
+            const rect = progressContainer.getBoundingClientRect();
+            const clickX = e.clientX - rect.left; // Vị trí click chuột
+            const width = rect.width;
+            const clickRatio = clickX / width;
+            
+            // Đối với live stream thực tế (không phải VOD), thuộc tính video.duration có thể là Infinity, lúc đó bạn không tua thủ công như thế này được.
+            if (video.duration && video.duration !== Infinity) {
+                video.currentTime = clickRatio * video.duration;
+            }
+        });
+
+        // 4. Âm lượng & Mute
+        volumeSlider.addEventListener('input', (e) => {
+            video.volume = e.target.value;
+            video.muted = (e.target.value == 0);
+            muteBtn.innerText = video.muted ? "🔇" : "🔊";
+        });
+
+        muteBtn.addEventListener('click', () => {
+            video.muted = !video.muted;
+            muteBtn.innerText = video.muted ? "🔇" : "🔊";
+            volumeSlider.value = video.muted ? 0 : video.volume;
+        });
+
+        // 5. Toàn màn hình (Fullscreen)
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                // Phải đưa toàn bộ Container vào chế độ Fullscreen để giữ lại GUI tự dựng
+                playerContainer.requestFullscreen().catch(err => {
+                    alert(`Không thể mở toàn màn hình: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        });
     });
 </script>
 
