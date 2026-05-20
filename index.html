@@ -3,75 +3,101 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Custom Video Player</title>
-    <!-- Thư viện icon của Google để hiển thị các nút điều khiển -->
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <title>Video Streaming Player</title>
+    <!-- Nhúng thư viện Hls.js từ CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #1c1c1c;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .player-container {
+            width: 100%;
+            max-width: 800px;
+            background: #000;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        video {
+            width: 100%;
+            display: block;
+        }
+        .controls-info {
+            color: #fff;
+            margin-top: 15px;
+            font-size: 14px;
+            text-align: center;
+        }
+    </style>
 </head>
 <body>
 
-    <div class="video-container" id="videoContainer">
-        <!-- Đường dẫn video mẫu (Bạn có thể đổi src thành file video của bạn) -->
-        <video id="myVideo" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" poster="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/images/BigBuckBunny.jpg"></video>
+<div class="player-container">
+    <!-- Thẻ video chuẩn HTML5 với các nút điều khiển mặc định -->
+    <video id="video" controls autoplay muted></video>
+</div>
+
+<div class="controls-info">
+    <p>Đang phát luồng HLS mã nguồn mở (Demo Live Stream)</p>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const video = document.getElementById('video');
         
-        <!-- Nút phát lớn ở giữa màn hình khi video tạm dừng -->
-        <div class="big-play-btn" id="bigPlayBtn">
-            <span class="material-icons">play_arrow</span>
-        </div>
+        // Thay link .m3u8 của bạn vào đây
+        const streamUrl = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8'; 
 
-        <!-- Thanh điều khiển (Controls Bar) -->
-        <div class="video-controls">
-            <!-- Khu vực thanh tua video (Timeline), tooltip và nút tròn sẽ tự động sinh thêm bằng JS -->
-            <div class="timeline-container" id="timelineContainer">
-                <div class="timeline">
-                    <div class="progress-bar" id="progressBar"></div>
-                </div>
-            </div>
+        if (Hls.isSupported()) {
+            // Nếu trình duyệt hỗ trợ Hls.js (Chrome, Firefox, Edge, Safari đời mới...)
+            const hls = new Hls();
+            hls.loadSource(streamUrl);
+            hls.attachMedia(video);
+            
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                video.play().catch(err => {
+                    console.log("Tự động phát bị chặn, chờ người dùng tương tác:", err);
+                });
+            });
 
-            <!-- Các nút chức năng phía dưới thanh tua -->
-            <div class="controls-buttons">
-                <!-- Nhóm chức năng bên trái -->
-                <div class="left-controls">
-                    <button class="control-btn" id="playPauseBtn">
-                        <span class="material-icons">play_arrow</span>
-                    </button>
-                    
-                    <!-- Thanh chỉnh âm lượng hiển thị khi hover loa -->
-                    <div class="volume-wrapper">
-                        <button class="control-btn" id="muteBtn">
-                            <span class="material-icons">volume_up</span>
-                        </button>
-                        <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1">
-                    </div>
+            // Xử lý lỗi trong quá trình stream
+            hls.on(Hls.Events.ERROR, (event, data) => {
+                if (data.fatal) {
+                    switch (data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR:
+                            console.log("Lỗi mạng, đang thử kết nối lại...");
+                            hls.startLoad();
+                            break;
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            console.log("Lỗi media, đang cố gắng phục hồi...");
+                            hls.recoverMediaError();
+                            break;
+                        default:
+                            console.log("Lỗi không thể phục hồi, hủy stream.");
+                            hls.destroy();
+                            break;
+                    }
+                }
+            });
 
-                    <!-- Bộ đếm thời gian dạng số -->
-                    <div class="time-display">
-                        <span id="currentTime">00:00</span> / <span id="durationTime">00:00</span>
-                    </div>
-                </div>
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Dành riêng cho Safari trên iPhone/Mac (hỗ trợ sẵn HLS không cần thư viện)
+            video.src = streamUrl;
+            video.addEventListener('loadedmetadata', () => {
+                video.play();
+            });
+        } else {
+            alert("Trình duyệt của bạn không hỗ trợ phát luồng video này.");
+        }
+    });
+</script>
 
-                <!-- Nhóm chức năng bên phải -->
-                <div class="right-controls">
-                    <!-- Nút tùy chọn tốc độ phát video (0.5x, 1x, 1.5x, 2x) -->
-                    <div class="speed-wrapper">
-                        <button class="control-btn" id="speedBtn">1x</button>
-                        <div class="speed-menu" id="speedMenu">
-                            <button data-speed="2">2.0x</button>
-                            <button data-speed="1.5">1.5x</button>
-                            <button data-speed="1" class="active">1.0x</button>
-                            <button data-speed="0.5">0.5x</button>
-                        </div>
-                    </div>
-
-                    <!-- Nút phóng to toàn màn hình -->
-                    <button class="control-btn" id="fullscreenBtn">
-                        <span class="material-icons">fullscreen</span>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
 </body>
 </html>
